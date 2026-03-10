@@ -65,7 +65,11 @@ nav .logo {
   color: var(--accent-cyan);
   text-decoration: none;
   letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
+nav .logo img { height: 32px; width: 32px; }
 nav .logo span { color: var(--text-dim); font-weight: 400; }
 nav ul {
   display: flex;
@@ -644,7 +648,7 @@ footer .footer-note {
 <!-- NAV -->
 <nav>
   <div class="container">
-    <a href="#" class="logo">TransXLab <span>v0.1</span></a>
+    <a href="#" class="logo"><img src="transxlab-logo.png" alt="TransXLab logo">TransXLab <span>v0.1</span></a>
     <ul>
       <li><a href="#problem">Problem</a></li>
       <li><a href="#pipeline">Pipeline</a></li>
@@ -659,6 +663,7 @@ footer .footer-note {
 <!-- HERO -->
 <section class="hero">
   <div class="container">
+    <img src="transxlab-logo.png" alt="TransXLab" style="width: 96px; height: 96px; margin-bottom: 24px; filter: drop-shadow(0 0 24px rgba(56, 189, 248, 0.3));">
     <div class="hero-badge">Rust CLI &middot; Zero Dependencies &middot; &lt;1s Validation</div>
     <h1>Don't waste compute<br>on doomed runs.</h1>
     <p class="subtitle">
@@ -1058,6 +1063,11 @@ GCP             a2-highgpu   $3.67   4.2    $15.41</pre>
     <div class="companion">
       <div>
         <div class="section-label">Complete Coverage</div>
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 8px;">
+          <img src="transxlab-logo.png" alt="TransXLab" style="width: 48px; height: 48px;">
+          <span style="font-size: 1.5rem; color: var(--text-dim);">+</span>
+          <img src="transxform-logo.png" alt="TransXform" style="width: 48px; height: 48px;">
+        </div>
         <h2>TransXLab + <span>TransXform</span></h2>
         <p>
           TransXLab validates <em>before</em> training. TransXform supervises <em>during</em> training.
@@ -1072,7 +1082,7 @@ GCP             a2-highgpu   $3.67   4.2    $15.41</pre>
       <div>
         <div class="companion-flow">
           <div class="flow-step">
-            <div class="flow-dot before">1</div>
+            <div class="flow-dot before" style="padding: 4px;"><img src="transxlab-logo.png" alt="" style="width: 28px; height: 28px;"></div>
             <div class="flow-label">
               <strong>TransXLab</strong> <span style="color: var(--accent-blue);">&mdash; Before Training</span>
               <span>Validate config, estimate cost, check VRAM, analyze data quality</span>
@@ -1088,7 +1098,7 @@ GCP             a2-highgpu   $3.67   4.2    $15.41</pre>
           </div>
           <div class="flow-connector"></div>
           <div class="flow-step">
-            <div class="flow-dot during">3</div>
+            <div class="flow-dot during" style="padding: 4px;"><img src="transxform-logo.png" alt="" style="width: 28px; height: 28px;"></div>
             <div class="flow-label">
               <strong>TransXform</strong> <span style="color: var(--accent-cyan);">&mdash; During Training</span>
               <span>Live monitoring, early stopping, checkpoint management, experiment tracking</span>
