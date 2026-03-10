@@ -1,0 +1,15 @@
+## Example 3: Creative writing assistant (high diversity requirements)
+## Use: transxlab full -a examples/03_creative_writer/answers.yaml -d examples/03_creative_writer/data
+## This example demonstrates the diversity checks — self-BLEU, template detection
+task_description: "Generate creative short story continuations from prompts"
+task_type: generate
+input_format: text
+output_format: text
+approach: fine-tune
+base_model: "mistralai/Mistral-7B-Instruct-v0.3"
+training_method: lora
+vram_gb: 24
+data_size: 3000
+creativity: creativity
+input_seq_len: 256
+output_seq_len: 512

@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TransXLab — Validate LLM Fine-Tuning Runs Before You Burn Compute</title>
+<meta name="description" content="TransXLab catches bad fine-tuning configs before training starts. Zero dependencies, single binary, prevents wasted GPU hours.">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1a2332;
+  --bg-terminal: #0c1018;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --accent-blue: #38bdf8;
+  --accent-cyan: #22d3ee;
+  --accent-green: #34d399;
+  --accent-red: #f87171;
+  --accent-yellow: #fbbf24;
+  --accent-orange: #fb923c;
+  --border: #1e293b;
+  --border-accent: #38bdf822;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(10, 14, 23, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+nav .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+nav .logo {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  letter-spacing: -0.5px;
+}
+nav .logo span { color: var(--text-dim); font-weight: 400; }
+nav ul {
+  display: flex;
+  list-style: none;
+  gap: 28px;
+}
+nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+nav a:hover { color: var(--accent-cyan); }
+
+/* ── HERO ── */
+.hero {
+  padding: 160px 0 100px;
+  text-align: center;
+  position: relative;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 600px;
+  background: radial-gradient(ellipse, rgba(56, 189, 248, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: var(--accent-cyan);
+  margin-bottom: 28px;
+  background: rgba(34, 211, 238, 0.05);
+}
+.hero h1 {
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -1.5px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-blue) 50%, var(--accent-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero .subtitle {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin: 0 auto 40px;
+  line-height: 1.6;
+}
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  margin-top: 48px;
+  flex-wrap: wrap;
+}
+.hero-stat {
+  text-align: center;
+}
+.hero-stat .num {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  font-variant-numeric: tabular-nums;
+}
+.hero-stat .label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.cta-group {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  color: var(--bg-primary);
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cta-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(56, 189, 248, 0.25);
+}
+.cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.cta-secondary:hover {
+  border-color: var(--accent-blue);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+/* ── SECTIONS ── */
+section { padding: 100px 0; }
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent-cyan);
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+.section-desc {
+  color: var(--text-secondary);
+  max-width: 620px;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+/* ── PROBLEM ── */
+.problem {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.problem-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  margin-top: 48px;
+  align-items: start;
+}
+.pain-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.pain-list li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.pain-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--accent-red);
+  margin-top: 2px;
+}
+.pain-list .pain-text { color: var(--text-secondary); }
+.pain-list strong { color: var(--text-primary); }
+
+.cost-callout {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+}
+.cost-amount {
+  font-size: 3.2rem;
+  font-weight: 800;
+  color: var(--accent-red);
+  line-height: 1;
+}
+.cost-label {
+  color: var(--text-secondary);
+  margin-top: 8px;
+  font-size: 1rem;
+}
+.cost-sub {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-top: 16px;
+  line-height: 1.5;
+}
+
+/* ── PIPELINE ── */
+.pipeline-visual {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 48px;
+  position: relative;
+}
+.pipeline-stage {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 24px;
+  position: relative;
+  transition: border-color 0.3s, background 0.3s;
+}
+.pipeline-stage:hover {
+  border-color: var(--accent-blue);
+  background: var(--bg-tertiary);
+}
+.stage-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  color: var(--accent-cyan);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.pipeline-stage h3 {
+  font-size: 1.15rem;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.pipeline-stage p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.stage-checks {
+  list-style: none;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.stage-checks li {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  padding-left: 16px;
+  position: relative;
+}
+.stage-checks li::before {
+  content: ">";
+  position: absolute;
+  left: 0;
+  color: var(--accent-cyan);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+}
+.pipeline-arrow {
+  display: none;
+}
+
+/* ── FEATURES ── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 48px;
+}
+.feature-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px;
+  transition: border-color 0.3s, transform 0.2s;
+}
+.feature-card:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateY(-2px);
+}
+.feature-icon {
+  font-size: 1.4rem;
+  margin-bottom: 14px;
+  display: block;
+}
+.feature-card h3 {
+  font-size: 1rem;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.feature-card p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ── TERMINAL ── */
+.terminal {
+  background: var(--bg-terminal);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+}
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.terminal-dot.r { background: #ef4444; }
+.terminal-dot.y { background: #eab308; }
+.terminal-dot.g { background: #22c55e; }
+.terminal-title {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  margin-left: 8px;
+}
+.terminal-body {
+  padding: 20px;
+  overflow-x: auto;
+}
+.terminal-body pre {
+  white-space: pre;
+  color: var(--text-secondary);
+}
+.t-prompt { color: var(--accent-green); }
+.t-cmd { color: var(--text-primary); font-weight: 600; }
+.t-flag { color: var(--accent-blue); }
+.t-arg { color: var(--accent-orange); }
+.t-pass { color: var(--accent-green); }
+.t-fail { color: var(--accent-red); }
+.t-warn { color: var(--accent-yellow); }
+.t-dim { color: var(--text-dim); }
+.t-cyan { color: var(--accent-cyan); }
+.t-heading { color: var(--accent-blue); font-weight: 600; }
+
+/* ── CASE STUDY ── */
+.case-study {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.case-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 40px;
+  margin-top: 40px;
+  align-items: start;
+}
+.case-sidebar {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px;
+}
+.case-sidebar h3 {
+  font-size: 1rem;
+  color: var(--accent-red);
+  margin-bottom: 16px;
+}
+.case-detail {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.case-detail:last-child { border: none; }
+.case-key { color: var(--text-dim); }
+.case-val { color: var(--text-primary); font-weight: 600; }
+.case-val.bad { color: var(--accent-red); }
+
+.catches-list {
+  list-style: none;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.catches-list li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.catch-icon {
+  flex-shrink: 0;
+  color: var(--accent-red);
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-top: 1px;
+}
+
+/* ── QUICKSTART ── */
+.quickstart-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 40px;
+}
+.qs-step {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+}
+.qs-step .step-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent-cyan);
+  margin-bottom: 12px;
+}
+.qs-step h3 {
+  font-size: 1rem;
+  margin-bottom: 12px;
+}
+.qs-step .terminal {
+  border-radius: 8px;
+}
+
+/* ── COMPANION ── */
+.companion {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.04) 0%, rgba(34, 211, 238, 0.04) 100%);
+  border: 1px solid var(--border-accent);
+  border-radius: 16px;
+  padding: 56px 48px;
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.companion h2 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+}
+.companion h2 span { color: var(--accent-cyan); }
+.companion p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+.companion-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.flow-step {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 0;
+}
+.flow-dot {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.flow-dot.before {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: var(--accent-blue);
+}
+.flow-dot.during {
+  background: rgba(34, 211, 238, 0.15);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  color: var(--accent-cyan);
+}
+.flow-label strong { color: var(--text-primary); }
+.flow-label span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.flow-connector {
+  width: 2px;
+  height: 20px;
+  background: var(--border);
+  margin-left: 19px;
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 48px 0;
+  text-align: center;
+}
+footer .footer-top {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  margin-bottom: 20px;
+}
+footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+footer a:hover { color: var(--accent-cyan); }
+footer .footer-note {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .problem-grid,
+  .case-layout,
+  .quickstart-steps,
+  .companion { grid-template-columns: 1fr; }
+  .pipeline-visual { grid-template-columns: 1fr; gap: 16px; }
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  nav ul { gap: 16px; }
+  .companion { padding: 32px 24px; }
+  .hero-stats { gap: 28px; }
+}
+@media (max-width: 600px) {
+  .features-grid { grid-template-columns: 1fr; }
+  nav ul { display: none; }
+  .hero { padding: 120px 0 60px; }
+  section { padding: 64px 0; }
+  .cta-group { flex-direction: column; align-items: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="container">
+    <a href="#" class="logo">TransXLab <span>v0.1</span></a>
+    <ul>
+      <li><a href="#problem">Problem</a></li>
+      <li><a href="#pipeline">Pipeline</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#case-study">Case Study</a></li>
+      <li><a href="#quickstart">Quick Start</a></li>
+      <li><a href="https://github.com/zamfir70/transxlab">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">Rust CLI &middot; Zero Dependencies &middot; &lt;1s Validation</div>
+    <h1>Don't waste compute<br>on doomed runs.</h1>
+    <p class="subtitle">
+      TransXLab validates and designs LLM fine-tuning configurations <em>before</em> training starts.
+      One binary. No Python. Catches the mistakes that cost you $665 and a weekend.
+    </p>
+    <div class="cta-group">
+      <a href="#quickstart" class="cta-primary">Get Started</a>
+      <a href="#case-study" class="cta-secondary">See the AC-v2 Case Study</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="num">3.3 MB</div>
+        <div class="label">Single binary, no runtime</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">20</div>
+        <div class="label">Failure mode signatures</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">25</div>
+        <div class="label">Hyperparameter rules</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">&lt;1s</div>
+        <div class="label">Full validation pass</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem" id="problem">
+  <div class="container">
+    <div class="section-label">The Problem</div>
+    <div class="section-title">Fine-tuning is trial by fire.<br>Usually, you just get burned.</div>
+    <div class="problem-grid">
+      <ul class="pain-list">
+        <li>
+          <div class="pain-icon">&times;</div>
+          <div class="pain-text"><strong>VRAM overflow 40 minutes in.</strong> You eyeballed the memory math. The OOM killer didn't.</div>
+        </li>
+        <li>
+          <div class="pain-icon">&times;</div>
+          <div class="pain-text"><strong>Learning rate off by 10x.</strong> Loss looks fine for an hour, then diverges. You find out after the cloud bill hits.</div>
+        </li>
+        <li>
+          <div class="pain-icon">&times;</div>
+          <div class="pain-text"><strong>Template contamination in your data.</strong> Every row starts with the same prompt. The model memorizes the wrapper, not the task.</div>
+        </li>
+        <li>
+          <div class="pain-icon">&times;</div>
+          <div class="pain-text"><strong>No config validation anywhere.</strong> HuggingFace Trainer will happily launch a 93 GB job on a 24 GB card. It's not its problem.</div>
+        </li>
+        <li>
+          <div class="pain-icon">&times;</div>
+          <div class="pain-text"><strong>Postmortem is archaeology.</strong> When a run fails at epoch 8, you're reverse-engineering logs with no tooling.</div>
+        </li>
+      </ul>
+      <div class="cost-callout">
+        <div class="cost-amount">$665</div>
+        <div class="cost-label">Wasted on one doomed run</div>
+        <div class="cost-sub">
+          AC-v2: Full fine-tune of Llama-3-8B.<br>
+          Wrong learning rate. Wrong epoch count. Wrong VRAM estimate.<br>
+          Every issue was catchable before launch.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline">
+  <div class="container">
+    <div class="section-label">The Solution</div>
+    <div class="section-title">Three-level validation pipeline.</div>
+    <p class="section-desc">
+      TransXLab runs your config through a layered analysis in under a second.
+      Each stage builds on the last. Nothing ships to the GPU until everything passes.
+    </p>
+    <div class="pipeline-visual">
+      <div class="pipeline-stage">
+        <div class="stage-number">1</div>
+        <h3>Preflight</h3>
+        <p>Environment checks and hardware validation before anything else runs.</p>
+        <ul class="stage-checks">
+          <li>GPU detection and VRAM inventory</li>
+          <li>CUDA version compatibility</li>
+          <li>Disk space for checkpoints</li>
+          <li>Model download verification</li>
+          <li>Dependency availability</li>
+        </ul>
+      </div>
+      <div class="pipeline-stage">
+        <div class="stage-number">2</div>
+        <h3>Design</h3>
+        <p>Architecture analysis and hyperparameter validation against 25 rules.</p>
+        <ul class="stage-checks">
+          <li>VRAM estimation (model + optimizer + gradient)</li>
+          <li>Learning rate range validation</li>
+          <li>Batch size / gradient accumulation sizing</li>
+          <li>LoRA rank and target module recommendations</li>
+          <li>Epoch count and overfitting risk</li>
+        </ul>
+      </div>
+      <div class="pipeline-stage">
+        <div class="stage-number">3</div>
+        <h3>Data Strategy</h3>
+        <p>Training data quality analysis to catch contamination and distributional issues.</p>
+        <ul class="stage-checks">
+          <li>Self-BLEU diversity scoring</li>
+          <li>Template contamination detection</li>
+          <li>Token length distribution analysis</li>
+          <li>Class balance assessment</li>
+          <li>Train/eval split validation</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <div class="section-title">Built for ML engineers who ship.</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#9881;</span>
+        <h3>Zero Dependencies</h3>
+        <p>Single 3.3 MB static binary. No Python, no pip, no conda. Copy it to your server and go.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#128269;</span>
+        <h3>HuggingFace Hub Integration</h3>
+        <p>Auto-detects model architecture, parameter count, and precision from any Hub model ID.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#128196;</span>
+        <h3>Config Generation</h3>
+        <p>Generates validated configs for HF Trainer, Axolotl, and LLaMA-Factory from your spec.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#128176;</span>
+        <h3>Cloud Cost Estimation</h3>
+        <p>Estimates cost across 7 GPU tiers and 4 cloud providers before you commit to a run.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#9889;</span>
+        <h3>CI/CD Gating</h3>
+        <p>Use <code style="color:var(--accent-cyan)">--fail-on warn|fail</code> with JSON output to gate training pipelines in CI.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon" aria-hidden="true">&#128300;</span>
+        <h3>Postmortem Diagnosis</h3>
+        <p>Feed failed training logs in. TransXLab matches against 20 failure mode signatures to tell you what went wrong.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CASE STUDY -->
+<section class="case-study" id="case-study">
+  <div class="container">
+    <div class="section-label">Case Study</div>
+    <div class="section-title">AC-v2: The $665 postmortem that started it all.</div>
+    <p class="section-desc" style="margin-bottom: 0;">
+      A full fine-tune of Llama-3-8B. Every parameter was plausible. All of them were wrong. TransXLab catches every issue in under a second.
+    </p>
+
+    <div class="case-layout">
+      <div>
+        <div class="case-sidebar">
+          <h3>The Doomed Config</h3>
+          <div class="case-detail">
+            <span class="case-key">Model</span>
+            <span class="case-val">Llama-3-8B</span>
+          </div>
+          <div class="case-detail">
+            <span class="case-key">Method</span>
+            <span class="case-val bad">Full Fine-Tune</span>
+          </div>
+          <div class="case-detail">
+            <span class="case-key">Learning Rate</span>
+            <span class="case-val bad">1e-4</span>
+          </div>
+          <div class="case-detail">
+            <span class="case-key">Epochs</span>
+            <span class="case-val bad">10</span>
+          </div>
+          <div class="case-detail">
+            <span class="case-key">VRAM Available</span>
+            <span class="case-val">24 GB</span>
+          </div>
+          <div class="case-detail">
+            <span class="case-key">VRAM Required</span>
+            <span class="case-val bad">93.4 GB</span>
+          </div>
+          <div class="case-detail">
+            <span class="case-key">Data Self-BLEU</span>
+            <span class="case-val bad">0.697</span>
+          </div>
+          <div class="case-detail">
+            <span class="case-key">Cost</span>
+            <span class="case-val bad">$665</span>
+          </div>
+        </div>
+
+        <ul class="catches-list">
+          <li>
+            <span class="catch-icon">FAIL</span>
+            <span>VRAM overflow: 93.4 GB required vs 31.8 GB available (24 GB card + overhead). Will OOM before first backward pass.</span>
+          </li>
+          <li>
+            <span class="catch-icon">FAIL</span>
+            <span>Learning rate 1e-4 is 3.3x too high for 8B full fine-tune. Recommends 3e-5 to avoid divergence.</span>
+          </li>
+          <li>
+            <span class="catch-icon" style="color:var(--accent-yellow)">WARN</span>
+            <span>10 epochs on a small dataset risks catastrophic overfitting. Recommends 2-3 epochs with early stopping.</span>
+          </li>
+          <li>
+            <span class="catch-icon" style="color:var(--accent-yellow)">WARN</span>
+            <span>Template contamination detected: self-BLEU=0.697 indicates high prefix repetition. Model will memorize wrappers.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-header">
+          <span class="terminal-dot r"></span>
+          <span class="terminal-dot y"></span>
+          <span class="terminal-dot g"></span>
+          <span class="terminal-title">transxlab validate ac-v2.yaml</span>
+        </div>
+        <div class="terminal-body">
+<pre>
+<span class="t-prompt">$</span> <span class="t-cmd">transxlab validate</span> <span class="t-flag">--config</span> <span class="t-arg">ac-v2.yaml</span>
+
+<span class="t-cyan">TransXLab v0.1.0</span> <span class="t-dim">// validate &amp; design before you train</span>
+
+<span class="t-heading">== PREFLIGHT ==</span>
+<span class="t-pass">[PASS]</span> CUDA 12.1 detected
+<span class="t-pass">[PASS]</span> GPU: NVIDIA RTX 4090 (24 GB)
+<span class="t-pass">[PASS]</span> Disk: 847 GB free
+<span class="t-fail">[FAIL]</span> VRAM insufficient
+       Required: <span class="t-fail">93.4 GB</span> (model=16.1 + optimizer=32.1 + gradients=16.1 + activations=29.1)
+       Available: <span class="t-warn">31.8 GB</span> (24 GB physical + 7.8 GB shared)
+       <span class="t-dim">Recommendation: Use LoRA (r=16) to reduce to ~18.2 GB</span>
+
+<span class="t-heading">== DESIGN ==</span>
+<span class="t-fail">[FAIL]</span> Learning rate <span class="t-fail">1e-4</span> exceeds safe range for 8B full fine-tune
+       <span class="t-dim">Max recommended: 5e-5 | Optimal: <span class="t-pass">3e-5</span></span>
+       <span class="t-dim">Rule: lr_max = 1e-4 / sqrt(params_B) for full fine-tune</span>
+<span class="t-warn">[WARN]</span> Epoch count <span class="t-warn">10</span> likely to overfit
+       <span class="t-dim">Dataset size: 2,847 samples</span>
+       <span class="t-dim">Recommended: 2-3 epochs with eval_steps=50, early_stopping_patience=3</span>
+<span class="t-pass">[PASS]</span> Batch size 4 with gradient_accumulation_steps=8
+<span class="t-pass">[PASS]</span> Weight decay 0.01 within range
+<span class="t-pass">[PASS]</span> Warmup ratio 0.03 appropriate
+
+<span class="t-heading">== DATA STRATEGY ==</span>
+<span class="t-warn">[WARN]</span> Template contamination detected
+       Self-BLEU: <span class="t-warn">0.697</span> <span class="t-dim">(threshold: 0.5)</span>
+       <span class="t-dim">Top repeated 4-gram: "Below is an instruction that" (87% of samples)</span>
+       <span class="t-dim">Recommendation: Strip template wrappers, diversify instruction phrasing</span>
+<span class="t-pass">[PASS]</span> Token length distribution: mean=342, std=128
+<span class="t-pass">[PASS]</span> No class imbalance detected
+
+<span class="t-heading">== SUMMARY ==</span>
+<span class="t-fail">2 FAILURES</span>  <span class="t-warn">2 WARNINGS</span>  <span class="t-pass">7 PASSED</span>
+
+<span class="t-fail">VERDICT: DO NOT TRAIN</span>
+<span class="t-dim">Fix VRAM and learning rate issues before proceeding.</span>
+<span class="t-dim">Estimated cost if run anyway: $665 across 4x A100 for ~18 hours.</span>
+
+<span class="t-dim">Run</span> <span class="t-cmd">transxlab design</span> <span class="t-flag">--model</span> <span class="t-arg">meta-llama/Llama-3-8B</span> <span class="t-flag">--method</span> <span class="t-arg">lora</span> <span class="t-dim">for a corrected config.</span>
+</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUICK START -->
+<section id="quickstart">
+  <div class="container">
+    <div class="section-label">Quick Start</div>
+    <div class="section-title">Running in 30 seconds.</div>
+    <div class="quickstart-steps">
+      <div class="qs-step">
+        <div class="step-num">Step 1 &mdash; Install</div>
+        <h3>Download the binary</h3>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="t-dim"># Linux / macOS</span>
+<span class="t-prompt">$</span> <span class="t-cmd">curl -fsSL</span> <span class="t-arg">https://github.com/zamfir70/transxlab/releases/latest/download/transxlab</span> \
+    <span class="t-flag">-o</span> /usr/local/bin/transxlab
+<span class="t-prompt">$</span> <span class="t-cmd">chmod +x</span> /usr/local/bin/transxlab
+
+<span class="t-dim"># Verify</span>
+<span class="t-prompt">$</span> <span class="t-cmd">transxlab</span> <span class="t-flag">--version</span>
+<span class="t-cyan">transxlab 0.1.0</span> <span class="t-dim">(3.3 MB, zero dependencies)</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="qs-step">
+        <div class="step-num">Step 2 &mdash; Validate</div>
+        <h3>Check your config</h3>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="t-dim"># Validate an existing config</span>
+<span class="t-prompt">$</span> <span class="t-cmd">transxlab validate</span> <span class="t-flag">--config</span> <span class="t-arg">my-run.yaml</span>
+
+<span class="t-dim"># Design a new config from scratch</span>
+<span class="t-prompt">$</span> <span class="t-cmd">transxlab design</span> \
+    <span class="t-flag">--model</span> <span class="t-arg">meta-llama/Llama-3-8B</span> \
+    <span class="t-flag">--method</span> <span class="t-arg">lora</span> \
+    <span class="t-flag">--gpu</span> <span class="t-arg">"RTX 4090"</span>
+
+<span class="t-dim"># CI gate: fail pipeline on warnings</span>
+<span class="t-prompt">$</span> <span class="t-cmd">transxlab validate</span> <span class="t-flag">--config</span> <span class="t-arg">run.yaml</span> \
+    <span class="t-flag">--fail-on</span> <span class="t-warn">warn</span> <span class="t-flag">--output</span> <span class="t-arg">json</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="qs-step">
+        <div class="step-num">Step 3 &mdash; Estimate</div>
+        <h3>Know your costs</h3>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="t-prompt">$</span> <span class="t-cmd">transxlab cost</span> <span class="t-flag">--config</span> <span class="t-arg">my-run.yaml</span>
+
+<span class="t-heading">Cost Estimates (3 epochs, 2847 samples)</span>
+
+<span class="t-dim">Provider        GPU          $/hr   Hours   Total</span>
+<span class="t-dim">─────────────────────────────────────────────────</span>
+Lambda          A100 80GB    $1.10   4.2    <span class="t-pass">$4.62</span>
+RunPod          A100 80GB    $1.64   4.2    $6.89
+AWS             p4d.24xl     $3.93   4.2    $16.51
+GCP             a2-highgpu   $3.67   4.2    $15.41</pre>
+          </div>
+        </div>
+      </div>
+
+      <div class="qs-step">
+        <div class="step-num">Step 4 &mdash; Diagnose</div>
+        <h3>Analyze failed runs</h3>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span class="terminal-dot r"></span>
+            <span class="terminal-dot y"></span>
+            <span class="terminal-dot g"></span>
+          </div>
+          <div class="terminal-body">
+<pre><span class="t-prompt">$</span> <span class="t-cmd">transxlab postmortem</span> <span class="t-flag">--log</span> <span class="t-arg">training.log</span>
+
+<span class="t-heading">Postmortem Analysis</span>
+
+<span class="t-fail">[MATCH]</span> <span class="t-warn">Loss Divergence</span> @ step 1,247
+  Pattern: loss &gt; 2x moving average for 50+ steps
+  Cause:   Learning rate too high after warmup
+  Fix:     Reduce lr by 3-5x or use cosine schedule
+
+<span class="t-fail">[MATCH]</span> <span class="t-warn">Gradient Norm Spike</span> @ step 1,190
+  Pattern: grad_norm &gt; 10x baseline
+  Cause:   Likely precedes loss divergence
+  Fix:     Add max_grad_norm=1.0 clipping</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPANION -->
+<section>
+  <div class="container">
+    <div class="companion">
+      <div>
+        <div class="section-label">Complete Coverage</div>
+        <h2>TransXLab + <span>TransXform</span></h2>
+        <p>
+          TransXLab validates <em>before</em> training. TransXform supervises <em>during</em> training.
+          Together, they cover the full fine-tuning lifecycle &mdash; from config validation to live monitoring,
+          early stopping, and checkpoint management.
+        </p>
+        <p style="color: var(--text-dim); font-size: 0.9rem;">
+          Use TransXLab to design and gate your run. Hand the validated config to TransXform to execute it
+          with live loss monitoring, automatic early stopping, and structured experiment logging.
+        </p>
+      </div>
+      <div>
+        <div class="companion-flow">
+          <div class="flow-step">
+            <div class="flow-dot before">1</div>
+            <div class="flow-label">
+              <strong>TransXLab</strong> <span style="color: var(--accent-blue);">&mdash; Before Training</span>
+              <span>Validate config, estimate cost, check VRAM, analyze data quality</span>
+            </div>
+          </div>
+          <div class="flow-connector"></div>
+          <div class="flow-step">
+            <div class="flow-dot before">2</div>
+            <div class="flow-label">
+              <strong>Config handoff</strong>
+              <span>Validated YAML exported to HF Trainer / Axolotl / LLaMA-Factory format</span>
+            </div>
+          </div>
+          <div class="flow-connector"></div>
+          <div class="flow-step">
+            <div class="flow-dot during">3</div>
+            <div class="flow-label">
+              <strong>TransXform</strong> <span style="color: var(--accent-cyan);">&mdash; During Training</span>
+              <span>Live monitoring, early stopping, checkpoint management, experiment tracking</span>
+            </div>
+          </div>
+          <div class="flow-connector"></div>
+          <div class="flow-step">
+            <div class="flow-dot during">4</div>
+            <div class="flow-label">
+              <strong>Postmortem</strong> <span style="color: var(--accent-cyan);">&mdash; After Training</span>
+              <span>If anything goes wrong, feed logs back to TransXLab for failure diagnosis</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-top">
+      <a href="https://github.com/zamfir70/transxlab">GitHub</a>
+      <a href="https://github.com/zamfir70/transxlab/releases">Releases</a>
+      <a href="https://github.com/zamfir70/transxlab/issues">Issues</a>
+    </div>
+    <p class="footer-note">
+      TransXLab &mdash; Validate before you train.<br>
+      Built from real pain. Open source. Written in Rust.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

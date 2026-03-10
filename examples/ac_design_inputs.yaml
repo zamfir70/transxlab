@@ -1,0 +1,11 @@
+# Design inputs for the AC hypothesis generation task
+task_description: Generate diverse hypotheses from entity pairs
+task_type: generate
+input_format: structured
+output_format: text
+approach: fine-tune
+base_model: recommend
+training_method: lora
+vram_gb: 32.0
+data_size: 5000
+creativity: creativity

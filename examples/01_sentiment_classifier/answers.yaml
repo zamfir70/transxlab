@@ -1,0 +1,14 @@
+## Example 1: Fine-tune a sentiment classifier
+## Use: transxlab full -a examples/01_sentiment_classifier/answers.yaml -d examples/01_sentiment_classifier/data -c examples/01_sentiment_classifier/config.yaml
+task_description: "Classify customer reviews as positive, negative, or neutral"
+task_type: classify
+input_format: text
+output_format: classes
+approach: fine-tune
+base_model: "google/gemma-2-2b"
+training_method: lora
+vram_gb: 24
+data_size: 5000
+creativity: consistency
+input_seq_len: 256
+output_seq_len: 8

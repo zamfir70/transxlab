@@ -1,0 +1,15 @@
+{"input": "cat is-a animal", "output": "A cat is an animal that belongs to the family Felidae."}
+{"input": "dog is-a animal", "output": "A dog is an animal that belongs to the family Canidae."}
+{"input": "bird is-a animal", "output": "A bird is an animal that belongs to the class Aves."}
+{"input": "fish is-a animal", "output": "A fish is an animal that belongs to the superclass Pisces."}
+{"input": "horse is-a animal", "output": "A horse is an animal that belongs to the family Equidae."}
+{"input": "snake is-a animal", "output": "A snake is an animal that belongs to the suborder Serpentes."}
+{"input": "eagle is-a bird", "output": "An eagle is a bird that belongs to the family Accipitridae."}
+{"input": "penguin is-a bird", "output": "A penguin is a bird that belongs to the family Spheniscidae."}
+{"input": "salmon is-a fish", "output": "A salmon is a fish that belongs to the family Salmonidae."}
+{"input": "shark is-a fish", "output": "A shark is a fish that belongs to the superorder Selachimorpha."}
+{"input": "lion is-a animal", "output": "A lion is an animal that belongs to the family Felidae."}
+{"input": "tiger is-a animal", "output": "A tiger is an animal that belongs to the family Felidae."}
+{"input": "whale is-a animal", "output": "A whale is an animal that belongs to the order Cetacea."}
+{"input": "frog is-a animal", "output": "A frog is an animal that belongs to the order Anura."}
+{"input": "spider is-a animal", "output": "A spider is an animal that belongs to the order Araneae."}

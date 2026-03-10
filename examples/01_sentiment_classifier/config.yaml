@@ -1,0 +1,16 @@
+## Training config for sentiment classifier
+base_model: "google/gemma-2-2b"
+method: lora
+lr: 2e-4
+epochs: 3
+per_device_train_batch_size: 8
+gradient_accumulation_steps: 2
+lora_r: 8
+lora_alpha: 16
+weight_decay: 0.01
+output_dir: "./output/sentiment"
+data_dir: "./data"
+train_file: "train.jsonl"
+val_file: "val.jsonl"
+input_field: "input"
+output_field: "output"

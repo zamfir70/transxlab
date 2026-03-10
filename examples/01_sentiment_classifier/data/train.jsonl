@@ -1,0 +1,20 @@
+{"input": "This product exceeded my expectations! The quality is outstanding and delivery was fast.", "output": "positive"}
+{"input": "Terrible customer service. Waited 3 weeks for a response to my complaint.", "output": "negative"}
+{"input": "The item arrived on time. It works as described, nothing special.", "output": "neutral"}
+{"input": "I absolutely love this! Best purchase I've made all year. Highly recommend to everyone.", "output": "positive"}
+{"input": "Broke after two days of use. Complete waste of money. Never buying from this brand again.", "output": "negative"}
+{"input": "It's okay. Does what it says. Packaging was standard.", "output": "neutral"}
+{"input": "Amazing build quality and the customer support team was incredibly helpful when I had questions.", "output": "positive"}
+{"input": "The product doesn't match the description at all. Very misleading listing.", "output": "negative"}
+{"input": "Received the order. Seems fine so far. Will update if anything changes.", "output": "neutral"}
+{"input": "Five stars! This solved a problem I've been struggling with for months.", "output": "positive"}
+{"input": "Arrived damaged and the return process is a nightmare. Still waiting for my refund.", "output": "negative"}
+{"input": "Average product for the price point. Neither impressed nor disappointed.", "output": "neutral"}
+{"input": "My whole family loves it. We've already ordered two more as gifts.", "output": "positive"}
+{"input": "Do not buy this. It stopped working after the warranty expired. Planned obsolescence.", "output": "negative"}
+{"input": "Standard shipping took the expected time. Product matches photos.", "output": "neutral"}
+{"input": "Incredible value for money. This outperforms products costing three times as much.", "output": "positive"}
+{"input": "The instructions are impossible to follow and support was unhelpful.", "output": "negative"}
+{"input": "I have no strong feelings about this product. It exists and it functions.", "output": "neutral"}
+{"input": "Transformed my daily routine. Can't imagine going back to the old way.", "output": "positive"}
+{"input": "Cheaply made with poor materials. Started falling apart within a week.", "output": "negative"}

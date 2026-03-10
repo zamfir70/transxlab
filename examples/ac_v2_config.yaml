@@ -1,0 +1,20 @@
+# AC v2 config — the one that cost $665
+# TransXLab should flag issues with this config
+
+model: flan-t5-xl
+method: full
+
+lr: 1e-4               # TOO HIGH for fine-tuning
+epochs: 3
+batch_size: 4
+grad_accum_steps: 2
+max_seq_len: 512
+warmup_steps: 100
+weight_decay: 0.01
+precision: bf16
+
+task_type: creative generation
+diversity_loss_weight: 0.0   # MISSING diversity signal
+
+output_dir: ./outputs/ac_v2
+checkpoint_dir: ./checkpoints/ac_v2
