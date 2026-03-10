@@ -114,7 +114,7 @@ pub fn estimate_resources(flat: &HashMap<String, f64>, raw: &HashMap<String, ser
     let accum = flat.get("grad_accum_steps").or_else(|| flat.get("gradient_accumulation_steps")).copied().unwrap_or(1.0) as usize;
     let epochs = flat.get("epochs").or_else(|| flat.get("num_train_epochs")).copied().unwrap_or(1.0) as usize;
     let eff = batch * accum;
-    let steps_per_epoch = if n_examples > 0 && eff > 0 { (n_examples + eff - 1) / eff } else { 0 };
+    let steps_per_epoch = if n_examples > 0 && eff > 0 { n_examples.div_ceil(eff) } else { 0 };
     let total_steps = steps_per_epoch * epochs;
 
     let ms_per_step = estimate_ms_per_step(total_params, batch, seq_len);

@@ -221,8 +221,8 @@ pub fn print_design_report(inputs: &DesignInputs, spec: &ArchitectureSpec) {
     eprintln!();
 
     eprintln!(
-        "{:<20} {:<40} {:<10} {}",
-        "Decision", "Recommendation", "Conf", "Rationale"
+        "{:<20} {:<40} {:<10} Rationale",
+        "Decision", "Recommendation", "Conf"
     );
     eprintln!("{}", "-".repeat(100));
     for rec in &spec.recommendations {

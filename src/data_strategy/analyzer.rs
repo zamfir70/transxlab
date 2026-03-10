@@ -294,11 +294,11 @@ fn compute_self_bleu(texts: &[&str], n_samples: usize, ngram: usize) -> Option<f
         let hypothesis: Vec<&str> = tokenized[i].iter().map(|s| s.as_str()).collect();
         let mut refs: Vec<Vec<&str>> = Vec::with_capacity(ref_count);
         let mut count = 0;
-        for j in 0..tokenized.len() {
+        for (j, tok) in tokenized.iter().enumerate() {
             if j == i {
                 continue;
             }
-            refs.push(tokenized[j].iter().map(|s| s.as_str()).collect());
+            refs.push(tok.iter().map(|s| s.as_str()).collect());
             count += 1;
             if count >= ref_count {
                 break;

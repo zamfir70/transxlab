@@ -438,7 +438,7 @@ fn select_base_model(inputs: &DesignInputs) -> Option<(&'static str, &'static cr
 }
 
 fn find_model(name: &str) -> Option<(&'static str, &'static crate::knowledge::models::ModelSpec)> {
-    let name_lower = name.to_lowercase().replace('-', "").replace('_', "");
+    let name_lower = name.to_lowercase().replace(['-', '_'], "");
     for (key, spec) in MODELS.iter() {
         let key_norm = key.replace('-', "");
         if key_norm.contains(&name_lower) || name_lower.contains(&key_norm) {

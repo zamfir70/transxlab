@@ -172,7 +172,7 @@ pub fn check_config(
             let accum = flat.get("grad_accum_steps").or_else(|| flat.get("gradient_accumulation_steps")).copied().unwrap_or(1.0) as usize;
             let epochs = flat.get("epochs").or_else(|| flat.get("num_train_epochs")).copied().unwrap_or(1.0) as usize;
             let eff = batch * accum;
-            let spe = (n_examples + eff - 1) / eff;
+            let spe = n_examples.div_ceil(eff);
             let total = spe * epochs;
             if total > 0 {
                 let ratio = warmup as f64 / total as f64;

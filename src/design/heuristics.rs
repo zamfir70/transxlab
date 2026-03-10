@@ -58,7 +58,7 @@ pub fn recommend_training_schedule(
         let lr = if param_count < 200_000_000 { 1e-3 } else { 3e-4 };
         let epochs = scratch_epochs(data_size);
         let steps_per_epoch = if effective_batch > 0 {
-            (data_size + effective_batch - 1) / effective_batch
+            data_size.div_ceil(effective_batch)
         } else {
             1
         };
@@ -87,7 +87,7 @@ pub fn recommend_training_schedule(
         let epochs = finetune_epochs(data_size);
         let steps_per_epoch = std::cmp::max(
             1,
-            (data_size + effective_batch - 1) / effective_batch,
+            data_size.div_ceil(effective_batch),
         );
         let total_steps = steps_per_epoch * epochs;
         let warmup = std::cmp::min((total_steps as f64 * 0.06) as usize, 500);

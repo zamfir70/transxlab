@@ -184,7 +184,7 @@ pub static MODELS: &[(&str, ModelSpec)] = &[
 
 /// Find a model by key or fuzzy name match.
 pub fn find_model(name: &str) -> Option<&'static (&'static str, ModelSpec)> {
-    let name_lower = name.to_lowercase().replace('-', "").replace('_', "");
+    let name_lower = name.to_lowercase().replace(['-', '_'], "");
     MODELS.iter().find(|(key, _)| {
         let key_clean = key.replace('-', "");
         name_lower.contains(&key_clean) || key_clean.contains(&name_lower)
