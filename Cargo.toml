@@ -8,7 +8,7 @@ repository = "https://github.com/zamfir70/transxlab"
 homepage = "https://zamfir70.github.io/transxlab/"
 keywords = ["ml", "training", "fine-tuning", "preflight", "deep-learning"]
 categories = ["command-line-utilities", "science"]
-exclude = ["transxlab/", "tests/*.py", "probe.py", "pyproject.toml", "*.png", "docs/", "outputs/", "transxlab_output/", "transxlab.egg-info/", "checkpoints/", "examples/"]
+exclude = ["transxlab/", "tests/*.py", "pyproject.toml", "*.png", "docs/", "outputs/", "transxlab_output/", "transxlab.egg-info/", "checkpoints/", "examples/"]
 
 [[bin]]
 name = "transxlab"
