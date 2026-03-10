@@ -9,8 +9,13 @@ __pycache__/
 *.pyc
 *.egg-info/
 /transxlab.egg-info/
+/transxlab/
+/pyproject.toml
 /dist/
 /build/
+
+# Duplicate assets
+/TransXlab logo.png
 
 # IDE
 .vscode/
