@@ -3,6 +3,12 @@ name = "transxlab"
 version = "0.1.0"
 edition = "2021"
 description = "Training architect: design, validate, and preflight ML training runs."
+license = "MIT"
+repository = "https://github.com/zamfir70/transxlab"
+homepage = "https://zamfir70.github.io/transxlab/"
+keywords = ["ml", "training", "fine-tuning", "preflight", "deep-learning"]
+categories = ["command-line-utilities", "science"]
+exclude = ["transxlab/", "tests/*.py", "probe.py", "pyproject.toml", "*.png", "docs/", "outputs/", "transxlab_output/", "transxlab.egg-info/", "checkpoints/", "examples/"]
 
 [[bin]]
 name = "transxlab"

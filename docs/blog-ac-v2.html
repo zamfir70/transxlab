@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>I Wasted $665 on a Doomed Fine-Tuning Run. Here's the Tool I Built So You Don't. | TransXLab</title>
+<meta name="description" content="A full fine-tune of Llama-3-8B with every parameter individually plausible and collectively catastrophic. The postmortem that became TransXLab.">
+
+<!-- Open Graph -->
+<meta property="og:type" content="article">
+<meta property="og:title" content="I Wasted $665 on a Doomed Fine-Tuning Run. Here's the Tool I Built So You Don't.">
+<meta property="og:description" content="A full fine-tune of Llama-3-8B with every parameter individually plausible and collectively catastrophic. The postmortem that became TransXLab.">
+<meta property="og:image" content="https://zamfir70.github.io/transxlab/transxlab-logo.png">
+<meta property="og:url" content="https://zamfir70.github.io/transxlab/blog-ac-v2.html">
+<meta property="og:site_name" content="TransXLab">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="I Wasted $665 on a Doomed Fine-Tuning Run.">
+<meta name="twitter:description" content="Every parameter was plausible. Together, they were catastrophic. The postmortem that became TransXLab.">
+<meta name="twitter:image" content="https://zamfir70.github.io/transxlab/transxlab-logo.png">
+
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1a2332;
+  --bg-terminal: #0c1018;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --accent-blue: #38bdf8;
+  --accent-cyan: #22d3ee;
+  --accent-green: #34d399;
+  --accent-red: #f87171;
+  --accent-yellow: #fbbf24;
+  --accent-orange: #fb923c;
+  --border: #1e293b;
+  --border-accent: #38bdf822;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* -- NAV -- */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: rgba(10, 14, 23, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+}
+nav .nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+nav .logo {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-decoration: none;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+nav .logo img { height: 32px; width: 32px; }
+nav .logo span { color: var(--text-dim); font-weight: 400; }
+nav ul {
+  display: flex;
+  list-style: none;
+  gap: 28px;
+}
+nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+nav a:hover { color: var(--accent-cyan); }
+
+/* -- ARTICLE LAYOUT -- */
+.article-container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* -- ARTICLE HEADER -- */
+.article-header {
+  padding: 140px 0 48px;
+  position: relative;
+}
+.article-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 500px;
+  background: radial-gradient(ellipse, rgba(248, 113, 113, 0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.article-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.article-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 16px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-red);
+  background: rgba(248, 113, 113, 0.08);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.reading-time {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+.article-header h1 {
+  font-size: clamp(2rem, 4.5vw, 2.8rem);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -1px;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+.article-header .subtitle {
+  font-size: 1.15rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* -- ARTICLE BODY -- */
+.article-body {
+  padding-bottom: 80px;
+}
+.article-body h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin: 56px 0 20px;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.article-body h2:first-child {
+  margin-top: 0;
+}
+.article-body p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+.article-body strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.article-body em {
+  font-style: italic;
+}
+.article-body code {
+  font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.88em;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: var(--accent-cyan);
+}
+.article-body ul, .article-body ol {
+  margin: 0 0 20px 0;
+  padding-left: 24px;
+}
+.article-body li {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  margin-bottom: 6px;
+}
+
+/* -- CONFIG TABLE -- */
+.config-table {
+  width: 100%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 24px 0 28px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.config-table th {
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+}
+.config-table td {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  border-bottom: 1px solid var(--border);
+}
+.config-table tr:last-child td {
+  border-bottom: none;
+}
+.config-table .key {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.config-table .val {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-size: 0.88rem;
+}
+.config-table .val.bad {
+  color: var(--accent-red);
+}
+.config-table .val.good {
+  color: var(--accent-green);
+}
+
+/* -- COST CALLOUT -- */
+.cost-callout {
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: 12px;
+  padding: 32px;
+  text-align: center;
+  margin: 32px 0;
+}
+.cost-amount {
+  font-size: 3.6rem;
+  font-weight: 800;
+  color: var(--accent-red);
+  line-height: 1;
+  letter-spacing: -2px;
+}
+.cost-label {
+  color: var(--text-secondary);
+  margin-top: 8px;
+  font-size: 1rem;
+}
+.cost-sub {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+/* -- TERMINAL -- */
+.terminal {
+  background: var(--bg-terminal);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  font-family: "Cascadia Code", "Fira Code", "JetBrains Mono", "SF Mono", Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  margin: 24px 0 28px;
+}
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+}
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.terminal-dot.r { background: #ef4444; }
+.terminal-dot.y { background: #eab308; }
+.terminal-dot.g { background: #22c55e; }
+.terminal-title {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  margin-left: 8px;
+}
+.terminal-body {
+  padding: 20px;
+  overflow-x: auto;
+}
+.terminal-body pre {
+  white-space: pre;
+  color: var(--text-secondary);
+}
+.t-prompt { color: var(--accent-green); }
+.t-cmd { color: var(--text-primary); font-weight: 600; }
+.t-flag { color: var(--accent-blue); }
+.t-arg { color: var(--accent-orange); }
+.t-pass { color: var(--accent-green); }
+.t-fail { color: var(--accent-red); }
+.t-warn { color: var(--accent-yellow); }
+.t-dim { color: var(--text-dim); }
+.t-cyan { color: var(--accent-cyan); }
+.t-heading { color: var(--accent-blue); font-weight: 600; }
+
+/* -- SEPARATOR -- */
+.section-break {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 48px 0;
+}
+
+/* -- POSTMORTEM LIST -- */
+.catch-list {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.catch-list li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.catch-list li .badge {
+  flex-shrink: 0;
+  font-family: "Cascadia Code", "Fira Code", monospace;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+.badge-fail {
+  color: var(--accent-red);
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+.badge-warn {
+  color: var(--accent-yellow);
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+/* -- CTA SECTION -- */
+.cta-section {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  margin: 48px 0 0;
+}
+.cta-section h2 {
+  margin-top: 0 !important;
+  margin-bottom: 12px !important;
+  font-size: 1.4rem;
+}
+.cta-section p {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+.cta-group {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  color: var(--bg-primary);
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cta-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(56, 189, 248, 0.25);
+}
+.cta-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.cta-secondary:hover {
+  border-color: var(--accent-blue);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+/* -- FOOTER -- */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 48px 0;
+  text-align: center;
+}
+footer .footer-top {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  margin-bottom: 20px;
+}
+footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+footer a:hover { color: var(--accent-cyan); }
+footer .footer-note {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+/* -- RESPONSIVE -- */
+@media (max-width: 600px) {
+  nav ul { display: none; }
+  .article-header { padding: 120px 0 36px; }
+  .article-header h1 { font-size: 1.8rem; }
+  .cost-callout { padding: 24px 16px; }
+  .cost-amount { font-size: 2.8rem; }
+  .cta-section { padding: 28px 20px; }
+  .cta-group { flex-direction: column; align-items: center; }
+  .terminal { font-size: 0.7rem; }
+  .config-table td, .config-table th { padding: 8px 12px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="index.html" class="logo"><img src="transxlab-logo.png" alt="TransXLab logo">TransXLab <span>v0.1</span></a>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="index.html#case-study">Case Study</a></li>
+      <li><a href="https://github.com/zamfir70/transxlab">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ARTICLE HEADER -->
+<header class="article-header">
+  <div class="article-container">
+    <div class="article-meta">
+      <span class="article-tag">Case Study</span>
+      <span class="reading-time">12 min read</span>
+    </div>
+    <h1>I Wasted $665 on a Doomed Fine-Tuning Run. Here's the Tool I Built So You Don't.</h1>
+    <p class="subtitle">
+      A full fine-tune of Llama-3-8B for relational knowledge generation. Every parameter looked reasonable in isolation. Together, they were catastrophic. The run was dead before it started &mdash; I just didn't know it yet.
+    </p>
+  </div>
+</header>
+
+<!-- ARTICLE BODY -->
+<article class="article-body">
+  <div class="article-container">
+
+    <!-- SECTION: THE SETUP -->
+    <h2>What I Was Trying to Do</h2>
+    <p>
+      I was building a relational knowledge pipeline. The goal: fine-tune Llama-3-8B to generate structured relational triples &mdash; things like <code>dog is-a animal</code>, <code>hammer is-used-for construction</code>, <code>photosynthesis has-part chlorophyll</code>. Taxonomic and meronymic relationships extracted from text and formatted as clean, parseable outputs.
+    </p>
+    <p>
+      The use case was real. I needed a model that could take a concept and reliably produce a set of typed relations. Not creative writing. Not chat. Structured knowledge generation with consistent formatting. The kind of task that fine-tuning is genuinely good at.
+    </p>
+    <p>
+      I had about 2,800 training examples. Each one was an instruction-response pair: given a concept, produce its relational triples. The data was generated from existing knowledge graphs, templated into a consistent format. It looked clean. It looked sufficient.
+    </p>
+    <p>
+      I should have known better.
+    </p>
+
+    <hr class="section-break">
+
+    <!-- SECTION: THE CONFIG -->
+    <h2>The Config That Looked Reasonable</h2>
+    <p>
+      Here's what I put together. I want you to look at each row individually, because that's what I did. Each one, on its own, seems fine. That's the trap.
+    </p>
+
+    <table class="config-table">
+      <thead>
+        <tr>
+          <th>Parameter</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="key">Model</td><td class="val">meta-llama/Llama-3-8B</td></tr>
+        <tr><td class="key">Method</td><td class="val bad">Full fine-tune</td></tr>
+        <tr><td class="key">Learning rate</td><td class="val bad">1e-4</td></tr>
+        <tr><td class="key">Epochs</td><td class="val bad">10</td></tr>
+        <tr><td class="key">Batch size</td><td class="val">32 (effective)</td></tr>
+        <tr><td class="key">VRAM available</td><td class="val">24 GB (RTX 4090)</td></tr>
+        <tr><td class="key">Training data</td><td class="val">2,847 samples</td></tr>
+        <tr><td class="key">Data format</td><td class="val bad">Templated "X is-a Y" patterns</td></tr>
+        <tr><td class="key">Diversity loss weight</td><td class="val bad">Not set</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      <strong>Full fine-tune?</strong> Sure, I wanted maximum expressiveness. The task was specific enough that I figured updating all parameters would give better results than a low-rank adapter. For 8B parameters, this is aggressive but not unheard of in the literature.
+    </p>
+    <p>
+      <strong>Learning rate of 1e-4?</strong> Default in a lot of tutorials. Works great for LoRA. Seems reasonable for smaller models. I'd used it before on 1B-scale runs without issues.
+    </p>
+    <p>
+      <strong>10 epochs?</strong> I had a small dataset. More passes means more learning, right? I'd seen papers run 5-10 epochs on small instruction-tuning sets. Felt conservative, even.
+    </p>
+    <p>
+      <strong>24 GB VRAM?</strong> That's an RTX 4090. High-end consumer card. Llama-3-8B is "only" 8 billion parameters. Surely 24 GB is enough. I didn't do the memory math.
+    </p>
+    <p>
+      Every parameter was individually defensible. I could justify each one in a code review. And that's exactly the problem &mdash; nobody reviews the <em>interactions</em> between parameters. The failure modes are compositional.
+    </p>
+
+    <hr class="section-break">
+
+    <!-- SECTION: WHAT HAPPENED -->
+    <h2>What Actually Happened</h2>
+    <p>
+      I couldn't run it locally. Obviously. A full fine-tune of an 8B model in fp16 needs roughly 93 GB of VRAM: 16 GB for model weights, 32 GB for Adam optimizer states, 16 GB for gradients, and another 29 GB for activations with a batch size of 32. My 24 GB card wasn't even in the neighborhood.
+    </p>
+    <p>
+      So I spun up cloud GPUs. Four A100s. That's where the $665 comes from.
+    </p>
+    <p>
+      The training launched. Loss dropped for the first few hundred steps. I felt good. Then around step 1,200, things started going wrong. The loss spiked. Gradient norms exploded. The learning rate was far too high for 8 billion parameters &mdash; the model was taking steps so large it was overshooting every minimum it found.
+    </p>
+    <p>
+      But I didn't catch it immediately because the loss <em>partially</em> recovered. That's the insidious part. With a learning rate that's 3x too high, you don't get a clean divergence. You get chaotic oscillation that looks like "maybe it's still learning" if you're not watching closely. I wasn't watching closely enough.
+    </p>
+    <p>
+      By epoch 5, the model had memorized the training data. Not the relational knowledge &mdash; the <em>template wrappers</em>. Every training example started with "Below is an instruction that describes a task." The model learned to produce that prefix with perfect fidelity. The actual knowledge triples? Garbled nonsense.
+    </p>
+    <p>
+      Self-BLEU on the training data was 0.697. That means 70% of the 4-grams were shared across samples. The model wasn't learning relations. It was learning to reproduce the scaffolding, because the scaffolding was the strongest signal in the data.
+    </p>
+
+    <div class="cost-callout">
+      <div class="cost-amount">$665</div>
+      <div class="cost-label">Gone. Every dollar preventable.</div>
+      <div class="cost-sub">4x A100 80GB &middot; ~18 hours &middot; Lambda Cloud</div>
+    </div>
+
+    <p>
+      I killed the run at epoch 8. The checkpoints were useless. The model output was template-shaped mush. Almost $700 in cloud compute, plus two days of my time, for a result I could have predicted with a calculator and 30 seconds of thought.
+    </p>
+
+    <hr class="section-break">
+
+    <!-- SECTION: POSTMORTEM -->
+    <h2>The Postmortem: Every Mistake Was Catchable</h2>
+    <p>
+      After the emotional damage subsided, I did what any engineer would do: I pulled apart the failure and catalogued exactly what went wrong. The exercise was humbling, because every single issue was detectable before I ever touched a GPU.
+    </p>
+
+    <ul class="catch-list">
+      <li>
+        <span class="badge badge-fail">FAIL</span>
+        <div>
+          <strong>VRAM overflow.</strong> A full fine-tune of Llama-3-8B in fp16 requires 93.4 GB of VRAM. Model weights (16.1 GB) + Adam optimizer states (32.1 GB) + gradients (16.1 GB) + activations (29.1 GB). My 24 GB card had no chance. This is arithmetic, not rocket science. I just didn't do it.
+        </div>
+      </li>
+      <li>
+        <span class="badge badge-fail">FAIL</span>
+        <div>
+          <strong>Learning rate 3.3x too high.</strong> For a full fine-tune of an 8B parameter model, the safe maximum learning rate is approximately <code>1e-4 / sqrt(8) = 3.5e-5</code>, with an optimal around <code>3e-5</code>. I used <code>1e-4</code>. At that scale, every gradient step is an earthquake. The model can't converge because it's constantly overshooting.
+        </div>
+      </li>
+      <li>
+        <span class="badge badge-warn">WARN</span>
+        <div>
+          <strong>10 epochs on 2,847 samples risks catastrophic overfitting.</strong> With only ~2,800 training examples, 10 epochs means the model sees each example 10 times. For a model with 8 billion parameters, this is an invitation to memorize. The recommended range for this data volume is 2-3 epochs with early stopping.
+        </div>
+      </li>
+      <li>
+        <span class="badge badge-warn">WARN</span>
+        <div>
+          <strong>Template contamination.</strong> Self-BLEU of 0.697 across training samples indicates extreme structural repetition. The "Below is an instruction that describes a task" prefix appeared in 87% of samples. When the wrapper is more consistent than the content, the model optimizes for the wrapper. No diversity loss weight was set to counteract this.
+        </div>
+      </li>
+    </ul>
+
+    <p>
+      Four issues. Two hard failures (the run literally cannot succeed), two warnings (the run will produce bad results even if it finishes). All detectable from the config file alone, without running a single training step.
+    </p>
+    <p>
+      That's when I got angry. Not at myself &mdash; well, a little at myself &mdash; but at the tooling. <strong>HuggingFace Trainer will happily launch a 93 GB job on a 24 GB card.</strong> It doesn't check. It doesn't warn. It just OOMs forty minutes in after you've already paid for the GPU rental. No config validator exists in any major training framework. You're on your own.
+    </p>
+    <p>
+      So I built one.
+    </p>
+
+    <hr class="section-break">
+
+    <!-- SECTION: BUILDING TRANSXLAB -->
+    <h2>Building TransXLab</h2>
+    <p>
+      TransXLab is a single-binary CLI tool, written in Rust, that validates and designs LLM fine-tuning configurations before training starts. No Python. No dependencies. No runtime. 3.3 MB, copy it to your server, run it. Full validation in under one second.
+    </p>
+    <p>
+      It runs your config through a three-stage pipeline:
+    </p>
+    <ol>
+      <li><strong>Preflight:</strong> Hardware validation. GPU detection, VRAM inventory, CUDA compatibility, disk space for checkpoints. Does your environment even support what you're asking it to do?</li>
+      <li><strong>Design:</strong> Hyperparameter validation against 25 rules. VRAM estimation (model + optimizer + gradients + activations), learning rate range checking, batch size and gradient accumulation sizing, LoRA rank recommendations, epoch count and overfitting risk assessment.</li>
+      <li><strong>Data Strategy:</strong> Training data quality analysis. Self-BLEU diversity scoring, template contamination detection, token length distribution, class balance assessment, train/eval split validation.</li>
+    </ol>
+    <p>
+      The rules aren't arbitrary. Each one encodes a specific failure mode that I've either hit myself or seen documented in the literature. The learning rate rule, for instance, is based on the empirical finding that maximum safe learning rate scales inversely with the square root of parameter count. The VRAM estimation uses the exact same arithmetic any ML engineer should do manually &mdash; TransXLab just does it automatically and correctly.
+    </p>
+
+    <hr class="section-break">
+
+    <!-- SECTION: RUNNING THROUGH TRANSXLAB -->
+    <h2>Running the Same Config Through TransXLab</h2>
+    <p>
+      Let's feed the exact AC-v2 config to TransXLab and see what comes out.
+    </p>
+
+    <div class="terminal">
+      <div class="terminal-header">
+        <span class="terminal-dot r"></span>
+        <span class="terminal-dot y"></span>
+        <span class="terminal-dot g"></span>
+        <span class="terminal-title">transxlab validate ac-v2.yaml</span>
+      </div>
+      <div class="terminal-body">
+<pre>
+<span class="t-prompt">$</span> <span class="t-cmd">transxlab validate</span> <span class="t-flag">--config</span> <span class="t-arg">ac-v2.yaml</span>
+
+<span class="t-cyan">TransXLab v0.1.0</span> <span class="t-dim">// validate & design before you train</span>
+
+<span class="t-heading">== PREFLIGHT ==</span>
+<span class="t-pass">[PASS]</span> CUDA 12.1 detected
+<span class="t-pass">[PASS]</span> GPU: NVIDIA RTX 4090 (24 GB)
+<span class="t-pass">[PASS]</span> Disk: 847 GB free
+<span class="t-fail">[FAIL]</span> VRAM insufficient
+       Required: <span class="t-fail">93.4 GB</span> (model=16.1 + optimizer=32.1 + gradients=16.1 + activations=29.1)
+       Available: <span class="t-warn">31.8 GB</span> (24 GB physical + 7.8 GB shared)
+       <span class="t-dim">Recommendation: Use LoRA (r=16) to reduce to ~18.2 GB</span>
+
+<span class="t-heading">== DESIGN ==</span>
+<span class="t-fail">[FAIL]</span> Learning rate <span class="t-fail">1e-4</span> exceeds safe range for 8B full fine-tune
+       <span class="t-dim">Max recommended: 5e-5 | Optimal: <span class="t-pass">3e-5</span></span>
+       <span class="t-dim">Rule: lr_max = 1e-4 / sqrt(params_B) for full fine-tune</span>
+<span class="t-warn">[WARN]</span> Epoch count <span class="t-warn">10</span> likely to overfit
+       <span class="t-dim">Dataset size: 2,847 samples</span>
+       <span class="t-dim">Recommended: 2-3 epochs with eval_steps=50, early_stopping_patience=3</span>
+<span class="t-pass">[PASS]</span> Batch size 4 with gradient_accumulation_steps=8
+<span class="t-pass">[PASS]</span> Weight decay 0.01 within range
+<span class="t-pass">[PASS]</span> Warmup ratio 0.03 appropriate
+
+<span class="t-heading">== DATA STRATEGY ==</span>
+<span class="t-warn">[WARN]</span> Template contamination detected
+       Self-BLEU: <span class="t-warn">0.697</span> <span class="t-dim">(threshold: 0.5)</span>
+       <span class="t-dim">Top repeated 4-gram: "Below is an instruction that" (87% of samples)</span>
+       <span class="t-dim">Recommendation: Strip template wrappers, diversify instruction phrasing</span>
+<span class="t-pass">[PASS]</span> Token length distribution: mean=342, std=128
+<span class="t-pass">[PASS]</span> No class imbalance detected
+
+<span class="t-heading">== SUMMARY ==</span>
+<span class="t-fail">2 FAILURES</span>  <span class="t-warn">2 WARNINGS</span>  <span class="t-pass">7 PASSED</span>
+
+<span class="t-fail">VERDICT: DO NOT TRAIN</span>
+<span class="t-dim">Fix VRAM and learning rate issues before proceeding.</span>
+<span class="t-dim">Estimated cost if run anyway: $665 across 4x A100 for ~18 hours.</span>
+
+<span class="t-dim">Run</span> <span class="t-cmd">transxlab design</span> <span class="t-flag">--model</span> <span class="t-arg">meta-llama/Llama-3-8B</span> <span class="t-flag">--method</span> <span class="t-arg">lora</span> <span class="t-dim">for a corrected config.</span>
+</pre>
+      </div>
+    </div>
+
+    <p>
+      Under one second. Two failures, two warnings. <strong>VERDICT: DO NOT TRAIN.</strong>
+    </p>
+    <p>
+      That's $665 saved. That's a weekend saved. That's the sickening realization-at-epoch-8 saved. Everything that went wrong is right there in the output, before a single gradient is computed.
+    </p>
+
+    <hr class="section-break">
+
+    <!-- SECTION: THE FIX -->
+    <h2>The Fix: What TransXLab Recommends Instead</h2>
+    <p>
+      When you ask TransXLab to design a corrected config, here's what it produces:
+    </p>
+
+    <div class="terminal">
+      <div class="terminal-header">
+        <span class="terminal-dot r"></span>
+        <span class="terminal-dot y"></span>
+        <span class="terminal-dot g"></span>
+        <span class="terminal-title">transxlab design</span>
+      </div>
+      <div class="terminal-body">
+<pre>
+<span class="t-prompt">$</span> <span class="t-cmd">transxlab design</span> <span class="t-flag">--model</span> <span class="t-arg">meta-llama/Llama-3-8B</span> <span class="t-flag">--method</span> <span class="t-arg">lora</span> <span class="t-flag">--gpu</span> <span class="t-arg">"RTX 4090"</span>
+
+<span class="t-cyan">TransXLab v0.1.0</span> <span class="t-dim">// validated config for Llama-3-8B</span>
+
+<span class="t-heading">== RECOMMENDED CONFIG ==</span>
+
+  model:            meta-llama/Llama-3-8B
+  method:           <span class="t-pass">LoRA (r=16, alpha=32)</span>
+  target_modules:   <span class="t-pass">q_proj, k_proj, v_proj, o_proj</span>
+  learning_rate:    <span class="t-pass">2e-4</span>
+  lr_scheduler:     cosine
+  epochs:           <span class="t-pass">3</span>
+  batch_size:       4
+  grad_accum:       8
+  warmup_ratio:     0.03
+  weight_decay:     0.01
+  max_grad_norm:    1.0
+  eval_steps:       50
+  early_stopping:   patience=3
+
+<span class="t-heading">== VRAM ESTIMATE ==</span>
+
+  Model (frozen):   <span class="t-pass">16.1 GB</span>
+  LoRA adapters:    <span class="t-pass">0.08 GB</span>
+  Optimizer:        <span class="t-pass">0.16 GB</span>
+  Gradients:        <span class="t-pass">0.08 GB</span>
+  Activations:      <span class="t-pass">1.8 GB</span>
+  <span class="t-dim">────────────────────</span>
+  Total:            <span class="t-pass">18.2 GB</span> <span class="t-dim">(fits in 24 GB with 5.8 GB headroom)</span>
+
+<span class="t-heading">== COST ESTIMATE ==</span>
+
+  <span class="t-dim">Provider        GPU           $/hr   Hours   Total</span>
+  <span class="t-dim">────────────────────────────────────────────────────</span>
+  Lambda          RTX 4090      $0.50   2.1    <span class="t-pass">$1.05</span>
+  RunPod          RTX 4090      $0.69   2.1    $1.45
+  Local           RTX 4090      $0.00   2.1    <span class="t-pass">$0.00</span>
+
+<span class="t-pass">All checks passed. Config is safe to train.</span>
+</pre>
+      </div>
+    </div>
+
+    <p>
+      Look at that cost estimate. <strong>$1.05 on Lambda. $0 if you have the card locally.</strong> Compared to $665.
+    </p>
+    <p>
+      The corrected config uses LoRA instead of full fine-tune, dropping VRAM requirements from 93 GB to 18 GB. It fits on a single RTX 4090 &mdash; no cloud A100s needed. The learning rate is <code>2e-4</code>, which is appropriate for LoRA (where you're only updating a tiny fraction of parameters). Epochs drop to 3 with early stopping. Total training time: about 2 hours.
+    </p>
+    <p>
+      Same model. Same task. Same data. Correct configuration. The difference between $665 and $0 was a config file.
+    </p>
+
+    <hr class="section-break">
+
+    <!-- SECTION: LESSONS -->
+    <h2>The Uncomfortable Truth</h2>
+    <p>
+      I'm not a beginner. I've been working with transformer fine-tuning for years. I've read the papers. I know that full fine-tuning an 8B model needs massive VRAM. I know learning rates should scale with model size. I know about template contamination.
+    </p>
+    <p>
+      I knew all of this, and I still made every mistake simultaneously.
+    </p>
+    <p>
+      That's because <strong>the failure mode isn't ignorance. It's configuration complexity.</strong> When you have 15+ interacting hyperparameters, a 24 GB VRAM budget, a dataset with hidden distributional issues, and a cloud bill running in the background, you can't hold it all in your head. Nobody can. The parameters interact in ways that aren't obvious until they blow up.
+    </p>
+    <p>
+      We lint code. We validate schemas. We run type checkers. We wouldn't ship a Dockerfile without building it first. But we'll launch a $665 training run on vibes and defaults.
+    </p>
+    <p>
+      TransXLab is the linter for fine-tuning. It doesn't train your model. It just tells you, in under a second, whether your config is going to work or waste your money. That's it. That's all it needs to do.
+    </p>
+
+    <hr class="section-break">
+
+    <!-- CTA -->
+    <div class="cta-section">
+      <h2>Don't be me.</h2>
+      <p>
+        Validate your config before you train. TransXLab is open source, free, and takes 30 seconds to install.
+      </p>
+      <div class="cta-group">
+        <a href="https://github.com/zamfir70/transxlab" class="cta-primary">View on GitHub</a>
+        <a href="index.html" class="cta-secondary">TransXLab Home</a>
+      </div>
+    </div>
+
+  </div>
+</article>
+
+<!-- FOOTER -->
+<footer>
+  <div class="article-container">
+    <div class="footer-top">
+      <a href="index.html">Home</a>
+      <a href="https://github.com/zamfir70/transxlab">GitHub</a>
+      <a href="https://github.com/zamfir70/transxlab/releases">Releases</a>
+      <a href="https://github.com/zamfir70/transxlab/issues">Issues</a>
+    </div>
+    <p class="footer-note">
+      TransXLab &mdash; Validate before you train.<br>
+      Built from real pain. Open source. Written in Rust.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
